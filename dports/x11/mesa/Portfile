@@ -1,0 +1,99 @@
+# -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
+# $Id$
+
+PortSystem          1.0
+
+name                mesa
+epoch               1
+version             10.3.5
+categories          x11 graphics
+maintainers         jeremyhu openmaintainer
+license             MIT
+license_noconflict  py26-libxml2 py27-libxml2
+description         Mesa 3D Graphics Library
+long_description    Mesa is an open-source implementation of the OpenGL specification, a system for rendering interactive 3D graphics.
+
+homepage            http://mesa3d.sourceforge.net/
+distname            MesaLib-${version}
+worksrcdir          Mesa-${version}
+platforms           macosx darwin
+use_bzip2           yes
+master_sites        ftp://ftp.freedesktop.org/pub/mesa/older-versions/10.x/${version}/ \
+                    ftp://ftp.freedesktop.org/pub/mesa/${version}/
+checksums           sha1    a45cdc162d72ecb2c6a7d2a63b17fbb72fc265f3 \
+                    rmd160  6f855ec371d1c6b3fb4d668f2c25a4de83d044f0 \
+                    sha256  eb75d2790f1606d59d50a6acaa637b6c75f2155b3e0eca3d5099165c0d9556ae
+
+depends_build       bin:pkg-config:pkgconfig \
+
+depends_lib         port:xorg-glproto \
+                    port:xorg-libXext \
+                    port:xorg-libXdamage
+#                    port:xorg-dri2proto \
+#                    port:xorg-libXfixes \
+#                    port:xorg-libXi \
+#                    port:xorg-libXmu
+
+use_configure  yes
+use_autoreconf yes
+use_parallel_build yes
+
+variant universal {}
+
+configure.args-append   --enable-gles1 \
+                        --enable-gles2
+
+build.args-append       V=1
+
+if { ![file exists /usr/include/Xplugin.h] } {
+    # Xplugin.h is missing on Tiger
+    configure.cppflags-append -I${filespath}/include
+}
+
+set cxx_stdlibflags {}
+if {[string match *clang* ${configure.cxx}]} {
+    set cxx_stdlibflags -stdlib=${configure.cxx_stdlib}
+}
+
+pre-configure {
+    if { ![file exists /usr/lib/libXplugin.dylib] } {
+        ui_error "Detected a problem with your development environment.  Please work around it by executing:"
+        ui_error "sudo ln -s libXplugin.1.dylib /usr/lib/libXplugin.dylib"
+        return -code error "missing libXplugin.dylib"
+    }
+}
+
+variant iglx description {Install a libGL that uses your X11 server's indirect GLX path for rendering (the default is off which allows libGL to accelerate rendering using OpenGL.framework)} {
+    # FIXME: can we port this to the new autotools build system?
+    # patchfiles-append iglx.patch
+}
+
+variant python26 conflicts python27 description {Use python 2.6} {
+    depends_build-append \
+        port:py26-libxml2
+    configure.env-append \
+        PYTHON2="${prefix}/bin/python2.6"
+}
+
+variant python27 conflicts python26 description {Use python 2.7} {
+    depends_build-append \
+        port:py27-libxml2
+    configure.env-append \
+        PYTHON2="${prefix}/bin/python2.7"
+}
+
+if {![variant_isset python26] && ![variant_isset python27]} {
+    default_variants +python27
+}
+
+platform darwin {
+    if {${build_arch} eq "i386" || ${build_arch} eq "x86_64"} {
+        # TODO: Try --enable-gallium-llvm and maybe even --with-gallium-drivers=llvmpipe for llvmpipe support.
+        configure.args-append   --disable-gallium-llvm \
+                                --with-gallium-drivers=
+    }
+}
+
+livecheck.type  regex
+livecheck.url   http://www.mesa3d.org/news.html
+livecheck.regex {relnotes-([0-9.]+)\.html}
