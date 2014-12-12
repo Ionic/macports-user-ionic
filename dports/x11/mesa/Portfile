@@ -29,6 +29,8 @@ depends_build       bin:pkg-config:pkgconfig \
 depends_lib         port:xorg-glproto \
                     port:xorg-libXext \
                     port:xorg-libXdamage
+
+                    # FIXME: are those still needed? Configure works without them.
 #                    port:xorg-dri2proto \
 #                    port:xorg-libXfixes \
 #                    port:xorg-libXi \
@@ -44,6 +46,13 @@ configure.args-append   --enable-gles1 \
                         --enable-gles2
 
 build.args-append       V=1
+
+
+###########################################################
+# Currently fails.                                        #
+# See: https://bugs.freedesktop.org/show_bug.cgi?id=66346 #
+###########################################################
+
 
 if { ![file exists /usr/include/Xplugin.h] } {
     # Xplugin.h is missing on Tiger
